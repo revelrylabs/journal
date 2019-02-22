@@ -1,11 +1,39 @@
 defmodule Journal.Adapter do
-  @callback put(key :: binary(), value :: any()) :: {:ok, any()} | {:error, any()}
+  @moduledoc """
+  Specifies API for Journal adapters
+  """
 
-  @callback get(key :: binary()) :: any() | nil
+  @type adapter_meta :: map
 
-  @callback get(key :: binary(), version :: integer) :: any() | nil
+  @doc """
+  Initializes the adapter
+  """
+  @callback init(config :: Keyword.t()) :: {:ok, :supervisor.child_spec(), adapter_meta}
 
-  @callback versions(key :: binary()) :: integer()
+  @doc """
+  Stores data by key. If there is data already associated with that key then the
+  new data is stored as a new version.
+  """
+  @callback put(adapter_meta :: adapter_meta, key :: binary(), value :: any()) ::
+              {:ok, any()} | {:error, any()}
 
-  @callback delete(key :: binary()) :: :ok
+  @doc """
+  Gets the latest version of data with the associated key or nil
+  """
+  @callback get(adapter_meta :: adapter_meta, key :: binary()) :: any() | nil
+
+  @doc """
+  Gets the specified version of data with the associated key or nil
+  """
+  @callback get(adapter_meta :: adapter_meta, key :: binary(), version :: integer) :: any() | nil
+
+  @doc """
+  Returns the number of versions for the associated key
+  """
+  @callback version_count(adapter_meta :: adapter_meta, key :: binary()) :: integer()
+
+  @doc """
+  Removes all data associated with the key
+  """
+  @callback delete(adapter_meta :: adapter_meta, key :: binary()) :: :ok
 end

@@ -1,6 +1,6 @@
 defmodule Journal do
   @moduledoc """
-  Documentation for Journal.
+  Journal stores and keeps track of versions of data.
   """
 
   defmacro __using__(opts) do
@@ -8,24 +8,45 @@ defmodule Journal do
       @otp_app opts[:otp_app]
       @adapter opts[:adapter]
 
+      def child_spec(opts) do
+        %{
+          id: __MODULE__,
+          start: {__MODULE__, :start_link, [opts]},
+          type: :supervisor
+        }
+      end
+
+      def start_link(opts \\ []) do
+        Journal.Supervisor.start_link(__MODULE__, @otp_app, @adapter, opts)
+      end
+
+      def stop(timeout \\ 5000) do
+        Supervisor.stop(__MODULE__, :normal, timeout)
+      end
+
       def put(key, value) do
-        @adapter.put(key, value)
+        @adapter.put(meta(), key, value)
       end
 
       def get(key) do
-        @adapter.get(key)
+        @adapter.get(meta(), key)
       end
 
       def get(key, version) do
-        @adapter.get(key, version)
+        @adapter.get(meta(), key, version)
       end
 
-      def versions(key) do
-        @adapter.versions(key)
+      def version_count(key) do
+        @adapter.version_count(meta(), key)
       end
 
       def delete(key) do
-        @adapter.delete(key)
+        @adapter.delete(meta(), key)
+      end
+
+      defp meta() do
+        [{_, {_adapter, meta}}] = Registry.lookup(Journal.Registry, __MODULE__)
+        meta
       end
     end
   end
