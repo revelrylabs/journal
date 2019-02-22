@@ -1,6 +1,6 @@
 # Journal
 
-Journal stores and keeps track of versions of data.
+Versioned key/value store with multiple backend support
 
 ## Usage
 

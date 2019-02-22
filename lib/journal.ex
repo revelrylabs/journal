@@ -1,6 +1,6 @@
 defmodule Journal do
   @moduledoc """
-  Journal stores and keeps track of versions of data.
+  Versioned key/value store with multiple backend support
   """
 
   defmacro __using__(opts) do

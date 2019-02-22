@@ -52,7 +52,7 @@ defmodule Journal.MixProject do
 
   defp description do
     """
-    Versions documents and data
+    Versioned key/value store with multiple backend support
     """
   end
 
