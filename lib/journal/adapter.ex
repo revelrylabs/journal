@@ -8,7 +8,7 @@ defmodule Journal.Adapter do
   @doc """
   Initializes the adapter
   """
-  @callback init(config :: Keyword.t()) :: {:ok, :supervisor.child_spec(), adapter_meta}
+  @callback init(config :: Keyword.t()) :: {:ok, :supervisor.child_spec() | nil, adapter_meta}
 
   @doc """
   Stores data by key. If there is data already associated with that key then the

@@ -15,9 +15,19 @@ defmodule Journal.Supervisor do
 
     # init the adapter and get the child spec and meta data
     {:ok, child_spec, meta} = adapter.init([journal: journal] ++ opts)
-    child_spec = wrap_child_spec(child_spec, [adapter, journal, meta])
 
-    Supervisor.init([child_spec], strategy: :one_for_one, max_restarts: 0)
+    children =
+      case child_spec do
+        nil ->
+          Registry.register(Journal.Registry, journal, {adapter, meta})
+          []
+
+        _ ->
+          child_spec = wrap_child_spec(child_spec, [adapter, journal, meta])
+          [child_spec]
+      end
+
+    Supervisor.init(children, strategy: :one_for_one, max_restarts: 0)
   end
 
   @doc """

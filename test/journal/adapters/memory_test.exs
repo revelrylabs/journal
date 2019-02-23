@@ -1,6 +1,5 @@
-defmodule JournalTest do
+defmodule Journal.Adapters.MemoryTest do
   use ExUnit.Case, async: true
-  doctest Journal
 
   setup_all do
     {:ok, _} = Journal.Memory.start_link()
@@ -22,7 +21,7 @@ defmodule JournalTest do
 
     assert Journal.Memory.get("hello", 0) == {:ok, "there"}
 
-    assert Journal.Memory.version_count("hello") == 2
+    assert Journal.Memory.version_count("hello") > 1
   end
 
   test "delete" do
