@@ -9,26 +9,26 @@ defmodule Journal.Adapters.IPFSTest do
   end
 
   test "put and get" do
-    Journal.IPFS.put("/hello/file.txt", "there")
-    assert Journal.IPFS.get("/hello/file.txt") == {:ok, "there"}
+    Journal.IPFS.put("/hello/test.txt", "there")
+    assert Journal.IPFS.get("/hello/test.txt") == {:ok, "there"}
   end
 
   test "put and get version" do
-    Journal.IPFS.put("/hello/file.txt", "there")
-    assert Journal.IPFS.get("/hello/file.txt") == {:ok, "there"}
+    Journal.IPFS.put("/hello/test.txt", "there")
+    assert Journal.IPFS.get("/hello/test.txt") == {:ok, "there"}
 
-    Journal.IPFS.put("/hello/file.txt", "the")
-    assert Journal.IPFS.get("/hello/file.txt") == {:ok, "the"}
+    Journal.IPFS.put("/hello/test.txt", "the")
+    assert Journal.IPFS.get("/hello/test.txt") == {:ok, "the"}
 
-    assert Journal.IPFS.get("/hello/file.txt", 0) == {:ok, "there"}
+    assert Journal.IPFS.get("/hello/test.txt", 0) == {:ok, "there"}
 
-    assert Journal.IPFS.version_count("/hello/file.txt") > 1
+    assert Journal.IPFS.version_count("/hello/test.txt") > 1
   end
 
   test "delete" do
-    Journal.IPFS.put("/hello/file.txt", "there")
-    Journal.IPFS.delete("/hello/file.txt")
+    Journal.IPFS.put("/hello/test.txt", "there")
+    Journal.IPFS.delete("/hello/test.txt")
 
-    assert Journal.IPFS.get("/hello/file.txt") == {:ok, nil}
+    assert Journal.IPFS.get("/hello/test.txt") == nil
   end
 end
