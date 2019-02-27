@@ -28,6 +28,18 @@ MyApp.Journal.put("hello", "there")
 
 MyApp.Journal.get("hello")
 # {:ok, "there"}
+
+MyApp.Journal.put("hello", "the")
+# {:ok, "hello"}
+
+MyApp.Journal.get("hello")
+# {:ok, "the"}
+
+MyApp.Journal.get("hello", 0)
+# {:ok, "there"}
+
+MyApp.Journal.version_count("hello")
+# 2
 ```
 
 ## Installation
