@@ -43,7 +43,14 @@ defmodule Journal.MixProject do
       {:jason, "~> 1.0"},
       {:ex_doc, "~> 0.19.1", only: :dev},
       {:bypass, "~> 1.0.0", only: :test},
-      {:excoveralls, "~> 0.10.3", only: :test}
+      {:excoveralls, "~> 0.10.3", only: :test},
+
+      # s3 adapter
+      {:ex_aws, "~> 2.1"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:hackney, "~> 1.9"},
+      {:sweet_xml, "~> 0.6"},
+      {:poison, "~> 4.0"}
     ]
   end
 
