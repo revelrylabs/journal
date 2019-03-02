@@ -4,6 +4,8 @@ defmodule Journal.Adapter do
   """
 
   @type adapter_meta :: map
+  alias Journal.Entry
+  alias Journal.Error
 
   @doc """
   Initializes the adapter
@@ -15,25 +17,28 @@ defmodule Journal.Adapter do
   new data is stored as a new version.
   """
   @callback put(adapter_meta :: adapter_meta, key :: binary(), value :: any()) ::
-              {:ok, any()} | {:error, any()}
+              {:ok, Entry.t()} | {:error, Error.t()}
 
   @doc """
   Gets the latest version of data with the associated key or nil
   """
-  @callback get(adapter_meta :: adapter_meta, key :: binary()) :: any() | nil
+  @callback get(adapter_meta :: adapter_meta, key :: binary()) ::
+              {:ok, Entry.t()} | {:error, Error.t()}
 
   @doc """
   Gets the specified version of data with the associated key or nil
   """
-  @callback get(adapter_meta :: adapter_meta, key :: binary(), version :: integer) :: any() | nil
+  @callback get(adapter_meta :: adapter_meta, key :: binary(), version :: integer) ::
+              {:ok, Entry.t()} | {:error, Error.t()}
 
   @doc """
-  Returns the number of versions for the associated key
+  Returns version data for the given key
   """
-  @callback version_count(adapter_meta :: adapter_meta, key :: binary()) :: integer()
+  @callback versions(adapter_meta :: adapter_meta, key :: binary()) ::
+              {:ok, [Entry.t()]} | {:error, Error.t()}
 
   @doc """
   Removes all data associated with the key
   """
-  @callback delete(adapter_meta :: adapter_meta, key :: binary()) :: :ok
+  @callback delete(adapter_meta :: adapter_meta, key :: binary()) :: :ok | {:error, Error.t()}
 end

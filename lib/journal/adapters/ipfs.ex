@@ -10,6 +10,7 @@ defmodule Journal.Adapters.IPFS do
   """
   alias Journal.Adapters.IPFS.API
   @dag_path "/.journal.adapters.ipfs"
+  alias Journal.{Entry, Error}
 
   def init(config) do
     meta = %{
@@ -21,7 +22,7 @@ defmodule Journal.Adapters.IPFS do
 
   def put(%{url: url}, key, value) do
     case get_dag_hash(url, key) do
-      nil ->
+      {:error, _error} ->
         dag = %{}
 
         API.file_write(url, key, value)
@@ -34,7 +35,23 @@ defmodule Journal.Adapters.IPFS do
 
         {:ok, %{"Cid" => %{"/" => ipfs_dag_hash}}} = API.dag_put(url, dag)
 
-        API.file_write(url, Path.join(@dag_path, key), ipfs_dag_hash)
+        case API.file_write(url, Path.join(@dag_path, key), ipfs_dag_hash) do
+          {:error, error} ->
+            {:error,
+             %Error{
+               key: key,
+               error: error
+             }}
+
+          {:ok, _} ->
+            {:ok,
+             %Entry{
+               key: key,
+               data: value,
+               version: 0,
+               timestamp: nil
+             }}
+        end
 
       ipfs_dag_hash ->
         {:ok, dag} = API.dag_get(url, ipfs_dag_hash)
@@ -51,60 +68,118 @@ defmodule Journal.Adapters.IPFS do
 
         {:ok, %{"Cid" => %{"/" => ipfs_dag_hash}}} = API.dag_put(url, dag)
 
-        API.file_write(url, Path.join(@dag_path, key), ipfs_dag_hash)
+        case API.file_write(url, Path.join(@dag_path, key), ipfs_dag_hash) do
+          {:error, error} ->
+            {:error,
+             %Error{
+               key: key,
+               error: error
+             }}
+
+          {:ok, _} ->
+            {:ok,
+             %Entry{
+               key: key,
+               data: value,
+               version: next_version,
+               timestamp: nil
+             }}
+        end
     end
   end
 
   def get(%{url: url}, key) do
     case API.file_read(url, key) do
-      {:error, %{"Message" => "file does not exist"}} ->
-        nil
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
 
-      ok ->
-        ok
+      {:ok, data} ->
+        {:ok,
+         %Entry{
+           key: key,
+           data: data,
+           version: nil,
+           timestamp: nil
+         }}
     end
   end
 
   def get(%{url: url}, key, version) do
     case get_dag_hash(url, key) do
-      nil ->
-        nil
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
 
       ipfs_dag_hash ->
-        API.cat(url, "#{ipfs_dag_hash}/version#{version}/content")
+        {:ok, data} = API.cat(url, "#{ipfs_dag_hash}/version#{version}/content")
+
+        {:ok,
+         %Entry{
+           key: key,
+           data: data,
+           version: version,
+           timestamp: nil
+         }}
     end
   end
 
-  def version_count(%{url: url}, key) do
+  def versions(%{url: url}, key) do
     case get_dag_hash(url, key) do
-      nil ->
-        0
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
 
       ipfs_dag_hash ->
         {:ok, dag} = API.dag_get(url, ipfs_dag_hash)
-        dag |> Map.keys() |> length()
+
+        versions =
+          dag
+          |> Map.keys()
+          |> Enum.map(fn dag_key ->
+            %Entry{
+              key: key,
+              data: nil,
+              version: String.replace(dag_key, "version", ""),
+              timestamp: nil
+            }
+          end)
+
+        {:ok, versions}
     end
   end
 
   def delete(%{url: url}, key) do
     case get_dag_hash(url, key) do
-      nil ->
-        nil
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
 
       _ ->
         API.file_delete(url, Path.join(@dag_path, key))
         API.file_delete(url, key)
+        :ok
     end
-
-    :ok
   end
 
   defp get_dag_hash(url, key) do
     dag_hash_path = Path.join(@dag_path, key)
 
     case API.file_read(url, dag_hash_path) do
-      {:error, %{"Message" => "file does not exist"}} ->
-        nil
+      {:error, _} = error ->
+        error
 
       {:ok, ipfs_dag_hash} ->
         ipfs_dag_hash

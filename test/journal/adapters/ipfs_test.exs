@@ -10,25 +10,25 @@ defmodule Journal.Adapters.IPFSTest do
 
   test "put and get" do
     Journal.IPFS.put("/hello/test.txt", "there")
-    assert Journal.IPFS.get("/hello/test.txt") == {:ok, "there"}
+    assert {:ok, %Journal.Entry{data: "there"}} = Journal.IPFS.get("/hello/test.txt")
   end
 
   test "put and get version" do
     Journal.IPFS.put("/hello/test.txt", "there")
-    assert Journal.IPFS.get("/hello/test.txt") == {:ok, "there"}
+    assert {:ok, %Journal.Entry{data: "there"}} = Journal.IPFS.get("/hello/test.txt")
 
     Journal.IPFS.put("/hello/test.txt", "the")
-    assert Journal.IPFS.get("/hello/test.txt") == {:ok, "the"}
+    assert {:ok, %Journal.Entry{data: "the"}} = Journal.IPFS.get("/hello/test.txt")
 
-    assert Journal.IPFS.get("/hello/test.txt", 0) == {:ok, "there"}
+    assert {:ok, %Journal.Entry{data: "there"}} = Journal.IPFS.get("/hello/test.txt", 0)
 
-    assert Journal.IPFS.version_count("/hello/test.txt") > 1
+    assert Journal.IPFS.versions("/hello/test.txt") |> elem(1) |> length() > 1
   end
 
   test "delete" do
     Journal.IPFS.put("/hello/test.txt", "there")
     Journal.IPFS.delete("/hello/test.txt")
 
-    assert Journal.IPFS.get("/hello/test.txt") == nil
+    assert {:error, %Journal.Error{}} = Journal.IPFS.get("/hello/test.txt")
   end
 end

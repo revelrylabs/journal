@@ -1,6 +1,7 @@
 defmodule Journal.Adapters.Memory.Agent do
   @moduledoc false
   use Agent
+  alias Journal.{Entry, Error}
 
   def start_link() do
     data = %{}
@@ -11,9 +12,23 @@ defmodule Journal.Adapters.Memory.Agent do
   def put(pid, key, value) do
     Agent.update(pid, fn state ->
       if Map.has_key?(state, key) do
-        Map.put(state, key, [value | state[key]])
+        entry = %Entry{
+          key: key,
+          data: value,
+          version: length(state[key]),
+          timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+
+        Map.put(state, key, [entry | state[key]])
       else
-        Map.put(state, key, [value])
+        entry = %Entry{
+          key: key,
+          data: value,
+          version: 0,
+          timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+
+        Map.put(state, key, [entry])
       end
     end)
   end
@@ -23,7 +38,10 @@ defmodule Journal.Adapters.Memory.Agent do
       if Map.has_key?(state, key) do
         hd(state[key])
       else
-        nil
+        %Error{
+          key: key,
+          error: "key not found"
+        }
       end
     end)
   end
@@ -35,17 +53,24 @@ defmodule Journal.Adapters.Memory.Agent do
         |> Enum.reverse()
         |> Enum.at(version)
       else
-        nil
+        %Error{
+          key: key,
+          error: "key not found"
+        }
       end
     end)
   end
 
-  def version_count(pid, key) do
+  def versions(pid, key) do
     Agent.get(pid, fn state ->
       if Map.has_key?(state, key) do
-        length(state[key])
+        state[key]
+        |> Enum.reverse()
       else
-        0
+        %Error{
+          key: key,
+          error: "key not found"
+        }
       end
     end)
   end

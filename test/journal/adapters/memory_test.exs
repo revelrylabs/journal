@@ -9,25 +9,23 @@ defmodule Journal.Adapters.MemoryTest do
 
   test "put and get" do
     Journal.Memory.put("hello", "there")
-    assert Journal.Memory.get("hello") == {:ok, "there"}
+    assert {:ok, %Journal.Entry{data: "there"}} = Journal.Memory.get("hello")
   end
 
   test "put and get version" do
     Journal.Memory.put("hello", "there")
-    assert Journal.Memory.get("hello") == {:ok, "there"}
+    assert {:ok, %Journal.Entry{data: "there"}} = Journal.Memory.get("hello")
 
     Journal.Memory.put("hello", "the")
-    assert Journal.Memory.get("hello") == {:ok, "the"}
+    assert {:ok, %Journal.Entry{data: "the"}} = Journal.Memory.get("hello")
 
-    assert Journal.Memory.get("hello", 0) == {:ok, "there"}
+    assert {:ok, %Journal.Entry{data: "there"}} = Journal.Memory.get("hello", 0)
 
-    assert Journal.Memory.version_count("hello") > 1
+    assert Journal.Memory.versions("hello") |> elem(1) |> length > 1
   end
 
   test "delete" do
-    Journal.Memory.put("hello", "there")
-    Journal.Memory.delete("hello")
-
-    assert Journal.Memory.get("hello") == {:ok, nil}
+    assert :ok = Journal.Memory.delete("hello")
+    assert {:error, %Journal.Error{error: "key not found"}} = Journal.Memory.get("hello")
   end
 end

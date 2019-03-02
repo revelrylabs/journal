@@ -36,8 +36,8 @@ defmodule Journal do
         @adapter.get(meta(), key, version)
       end
 
-      def version_count(key) do
-        @adapter.version_count(meta(), key)
+      def versions(key) do
+        @adapter.versions(meta(), key)
       end
 
       def delete(key) do

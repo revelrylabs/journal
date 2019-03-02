@@ -19,6 +19,7 @@ defmodule Journal.Adapters.S3 do
   This can be changed in your config.
   """
   alias ExAws.S3
+  alias Journal.{Entry, Error}
 
   def init(config) do
     meta = %{
@@ -32,11 +33,21 @@ defmodule Journal.Adapters.S3 do
     response = S3.put_object(bucket, key, value) |> ExAws.request()
 
     case response do
-      {:ok, %{body: _}} ->
-        {:ok, key}
+      {:ok, data} ->
+        {:ok,
+         %Entry{
+           key: key,
+           data: value,
+           version: List.keyfind(data.headers, "x-amz-version-id", 0, {:noop, nil}) |> elem(1),
+           timestamp: List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil}) |> elem(1)
+         }}
 
-      error ->
-        error
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
     end
   end
 
@@ -44,22 +55,73 @@ defmodule Journal.Adapters.S3 do
     response = S3.get_object(bucket, key) |> ExAws.request()
 
     case response do
-      {:ok, %{body: body}} ->
-        {:ok, body}
+      {:ok, %{body: body} = data} ->
+        {:ok,
+         %Entry{
+           key: key,
+           data: body,
+           version: List.keyfind(data.headers, "x-amz-version-id", 0, {:noop, nil}) |> elem(1),
+           timestamp: List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil}) |> elem(1)
+         }}
 
-      {:error, {:http_error, 404, _}} ->
-        {:ok, nil}
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
     end
   end
 
   def get(%{bucket: bucket}, key, version) do
-    {:ok, key}
+    response = S3.get_object(bucket, key <> "?versionId=#{version}") |> ExAws.request()
+
+    case response do
+      {:ok, %{body: body} = data} ->
+        {:ok,
+         %Entry{
+           key: key,
+           data: body,
+           version: List.keyfind(data.headers, "x-amz-version-id", 0, {:noop, nil}) |> elem(1),
+           timestamp: List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil}) |> elem(1)
+         }}
+
+      {:error, error} ->
+        {:error,
+         %Error{
+           key: key,
+           error: error
+         }}
+    end
   end
 
-  def version_count(%{bucket: bucket}, key) do
-    0
+  def versions(%{bucket: bucket}, key) do
+    import SweetXml
+
+    {:ok, %{body: body}} = S3.get_bucket_object_versions(bucket) |> ExAws.request()
+
+    versions =
+      body
+      |> xpath(~x"//Version[Key[contains(text(), \"#{String.trim_leading(key, "/")}\")]]"l,
+        key: ~x"./Key/text()",
+        version_id: ~x"./VersionId/text()",
+        last_modified: ~x"./LastModified/text()"
+      )
+      |> Enum.map(fn version ->
+        %Entry{
+          key: key,
+          data: nil,
+          version: version.version_id,
+          timestamp: version.last_modified
+        }
+      end)
+
+    # return version ids or just number of versions?
+
+    {:ok, versions}
   end
 
+  @spec delete(%{bucket: binary()}, binary()) :: :ok
   def delete(%{bucket: bucket}, key) do
     S3.delete_object(bucket, key) |> ExAws.request()
 
