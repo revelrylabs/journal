@@ -61,7 +61,10 @@ defmodule Journal.Adapters.S3 do
            key: key,
            data: body,
            version: List.keyfind(data.headers, "x-amz-version-id", 0, {:noop, nil}) |> elem(1),
-           timestamp: List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil}) |> elem(1)
+           timestamp:
+             List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil})
+             |> elem(1)
+             |> format_timestamp()
          }}
 
       {:error, error} ->
@@ -83,7 +86,10 @@ defmodule Journal.Adapters.S3 do
            key: key,
            data: body,
            version: List.keyfind(data.headers, "x-amz-version-id", 0, {:noop, nil}) |> elem(1),
-           timestamp: List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil}) |> elem(1)
+           timestamp:
+             List.keyfind(data.headers, "Last-Modified", 0, {:noop, nil})
+             |> elem(1)
+             |> format_timestamp()
          }}
 
       {:error, error} ->
@@ -104,19 +110,17 @@ defmodule Journal.Adapters.S3 do
       body
       |> xpath(~x"//Version[Key[contains(text(), \"#{String.trim_leading(key, "/")}\")]]"l,
         key: ~x"./Key/text()",
-        version_id: ~x"./VersionId/text()",
-        last_modified: ~x"./LastModified/text()"
+        version_id: ~x"./VersionId/text()"s,
+        last_modified: ~x"./LastModified/text()"s
       )
       |> Enum.map(fn version ->
         %Entry{
           key: key,
           data: nil,
           version: version.version_id,
-          timestamp: version.last_modified
+          timestamp: Timex.parse!(version.last_modified, "{ISO:Extended:Z}")
         }
       end)
-
-    # return version ids or just number of versions?
 
     {:ok, versions}
   end
@@ -126,5 +130,19 @@ defmodule Journal.Adapters.S3 do
     S3.delete_object(bucket, key) |> ExAws.request()
 
     :ok
+  end
+
+  defp format_timestamp(nil) do
+    nil
+  end
+
+  defp format_timestamp(timestamp) do
+    case Timex.parse(timestamp, "{RFC1123}") do
+      {:ok, t} ->
+        t
+
+      {:error, _} ->
+        timestamp
+    end
   end
 end

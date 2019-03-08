@@ -28,9 +28,12 @@ defmodule Journal.Adapters.IPFS do
         API.file_write(url, key, value)
         {:ok, %{"Hash" => hash}} = API.file_stat(url, key)
 
+        last_modified = DateTime.utc_now()
+
         dag =
           Map.put(dag, "version0", %{
-            "content" => %{"/" => hash}
+            "content" => %{"/" => hash},
+            "last_modified" => Timex.format!(last_modified, "{ISO:Extended}")
           })
 
         {:ok, %{"Cid" => %{"/" => ipfs_dag_hash}}} = API.dag_put(url, dag)
@@ -49,7 +52,7 @@ defmodule Journal.Adapters.IPFS do
                key: key,
                data: value,
                version: 0,
-               timestamp: nil
+               timestamp: last_modified
              }}
         end
 
@@ -61,9 +64,12 @@ defmodule Journal.Adapters.IPFS do
 
         next_version = dag |> Map.keys() |> length()
 
+        last_modified = DateTime.utc_now()
+
         dag =
           Map.put(dag, "version#{next_version}", %{
-            "content" => %{"/" => hash}
+            "content" => %{"/" => hash},
+            "last_modified" => Timex.format!(last_modified, "{ISO:Extended}")
           })
 
         {:ok, %{"Cid" => %{"/" => ipfs_dag_hash}}} = API.dag_put(url, dag)
@@ -82,7 +88,7 @@ defmodule Journal.Adapters.IPFS do
                key: key,
                data: value,
                version: next_version,
-               timestamp: nil
+               timestamp: last_modified
              }}
         end
     end
@@ -120,12 +126,15 @@ defmodule Journal.Adapters.IPFS do
       ipfs_dag_hash ->
         {:ok, data} = API.cat(url, "#{ipfs_dag_hash}/version#{version}/content")
 
+        {:ok, last_modified} =
+          API.dag_get(url, "#{ipfs_dag_hash}/version#{version}/last_modified")
+
         {:ok,
          %Entry{
            key: key,
            data: data,
            version: version,
-           timestamp: nil
+           timestamp: Timex.parse!(last_modified, "{ISO:Extended:Z}")
          }}
     end
   end
@@ -150,7 +159,7 @@ defmodule Journal.Adapters.IPFS do
               key: key,
               data: nil,
               version: String.replace(dag_key, "version", ""),
-              timestamp: nil
+              timestamp: Timex.parse!(get_in(dag, [dag_key, "last_modified"]), "{ISO:Extended:Z}")
             }
           end)
 
